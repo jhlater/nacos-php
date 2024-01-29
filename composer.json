@@ -1,5 +1,5 @@
 {
-    "name": "yurunsoft/nacos-php",
+    "name": "jhlater/nacos-php",
     "description": "Nacos PHP client, which also supports Swoole Coroutine",
     "type": "library",
     "license": "Apache-2.0",
