@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Yurun\Nacos\Provider\Instance;
 
 use Yurun\Nacos\Provider\BaseProvider;
-use Yurun\Nacos\Provider\Instance\Model\BeatResponse;
 use Yurun\Nacos\Provider\Instance\Model\DetailResponse;
 use Yurun\Nacos\Provider\Instance\Model\ListResponse;
 use Yurun\Nacos\Provider\Instance\Model\RsInfo;
@@ -14,12 +13,12 @@ use Yurun\Util\YurunHttp\Http\Psr7\Consts\RequestMethod;
 
 class InstanceProvider extends BaseProvider
 {
-    public const INSTANCE_API_APTH = 'nacos/v1/ns/instance';
+    public const INSTANCE_API_APTH = 'nacos/v2/ns/instance';
 
     /**
      * @param string|float $weight
      */
-    public function register(string $ip, int $port, string $serviceName, string $namespaceId = '', $weight = 1, bool $enabled = true, bool $healthy = true, string $metadata = '', string $clusterName = '', string $groupName = '', bool $ephemeral = true): bool
+    public function register(string $ip, int $port, string $serviceName, string $namespaceId, string $groupName = 'DEFAULT_GROUP', string $metadata = '', bool $ephemeral = true, $weight = 1, bool $enabled = true, bool $healthy = true, string $clusterName = 'DEFAULT'): bool
     {
         return 'ok' === $this->client->request(self::INSTANCE_API_APTH, [
             'ip'          => $ip,
@@ -30,29 +29,30 @@ class InstanceProvider extends BaseProvider
             'healthy'     => StringUtil::convertBoolToString($healthy),
             'metadata'    => $metadata,
             'clusterName' => $clusterName,
-            'serviceName' => $serviceName,
+            'serviceName' => $groupName.'@@'.$serviceName,
             'groupName'   => $groupName,
             'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
         ], RequestMethod::POST)->body();
     }
-
-    public function deregister(string $ip, int $port, string $serviceName, string $namespaceId = '', string $clusterName = '', string $groupName = '', bool $ephemeral = true): bool
+    
+    public function deregister(string $ip, int $port, string $serviceName, string $namespaceId = '', $weight = 1, $enabled = true, $healthy = true, $metadata = '', string $clusterName = '', string $groupName = '', bool $ephemeral = false): bool
     {
         return 'ok' === $this->client->request(self::INSTANCE_API_APTH, [
             'ip'          => $ip,
             'port'        => $port,
             'namespaceId' => $namespaceId,
             'clusterName' => $clusterName,
-            'serviceName' => $serviceName,
+            'serviceName' => $groupName.'@@'.$serviceName,
             'groupName'   => $groupName,
             'ephemeral'   => $ephemeral,
+            'metadata'    => $metadata,
         ], RequestMethod::DELETE)->body();
     }
 
     /**
      * @param string|float $weight
      */
-    public function update(string $ip, int $port, string $serviceName, string $namespaceId = '', $weight = 1, bool $enabled = true, bool $healthy = true, string $metadata = '', string $clusterName = '', string $groupName = '', bool $ephemeral = true): bool
+    public function update(string $ip, int $port, string $serviceName, string $namespaceId = '', $weight = 1, bool $enabled = true, bool $healthy = true, string $metadata = '', string $clusterName = 'DEFAULT', string $groupName = 'DEFAULT_GROUP', bool $ephemeral = false): bool
     {
         return 'ok' === $this->client->request(self::INSTANCE_API_APTH, [
             'ip'          => $ip,
@@ -63,7 +63,7 @@ class InstanceProvider extends BaseProvider
             'healthy'     => StringUtil::convertBoolToString($healthy),
             'metadata'    => $metadata,
             'clusterName' => $clusterName,
-            'serviceName' => $serviceName,
+            'serviceName' => $groupName.'@@'.$serviceName,
             'groupName'   => $groupName,
             'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
         ], RequestMethod::PUT)->body();
@@ -74,7 +74,7 @@ class InstanceProvider extends BaseProvider
      */
     public function list(string $serviceName, string $groupName = '', string $namespaceId = '', $clusters = '', bool $healthyOnly = false): ListResponse
     {
-        return $this->client->request('nacos/v1/ns/instance/list', [
+        return $this->client->request('nacos/v2/ns/instance/list', [
             'serviceName' => $serviceName,
             'groupName'   => $groupName,
             'namespaceId' => $namespaceId,
@@ -86,7 +86,7 @@ class InstanceProvider extends BaseProvider
     /**
      * @param string|string[] $clusters
      */
-    public function detail(string $ip, int $port, string $serviceName, string $groupName = '', string $namespaceId = '', $clusters = '', bool $healthyOnly = false, bool $ephemeral = true): DetailResponse
+    public function detail(string $ip, int $port, string $serviceName, string $groupName = '', string $namespaceId = '', $clusters = '', bool $healthyOnly = false, bool $ephemeral = false): DetailResponse
     {
         return $this->client->request(self::INSTANCE_API_APTH, [
             'ip'          => $ip,
@@ -100,16 +100,32 @@ class InstanceProvider extends BaseProvider
         ], RequestMethod::GET, [], DetailResponse::class);
     }
 
-    public function beat(string $serviceName, RsInfo $beat, string $groupName = '', string $namespaceId = '', bool $ephemeral = true): BeatResponse
+    public function beat(string $serviceName, RsInfo $beat, string $groupName = 'DEFAULT_GROUP', string $namespaceId = '', string $metadata = '',bool $ephemeral = false): bool
     {
-        return $this->client->request('nacos/v1/ns/instance/beat', [
-            'serviceName' => $serviceName,
+        return 'ok' === $this->client->request('nacos/v2/ns/health/instance', [
+            'serviceName' => $groupName.'@@'.$serviceName,
             'ip'          => $beat->getIp(),
             'port'        => $beat->getPort(),
             'namespaceId' => $namespaceId,
-            'beat'        => json_encode($beat),
+            'healthy'        => StringUtil::convertBoolToString($healthy),
             'groupName'   => $groupName,
-            'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
-        ], RequestMethod::PUT, [], BeatResponse::class);
+            //'metadata'    => $metadata,
+            //'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
+        ], RequestMethod::PUT)->body();
+    }
+
+
+    public function healthy(string $ip, int $port, string $serviceName, string $namespaceId = '', string $groupName = 'DEFAULT_GROUP', string $clusterName = 'DEFAULT',$healthy = true): bool
+    {
+        return 'ok' === $this->client->request('nacos/v2/ns/health/instance', [
+                'serviceName' => $groupName.'@@'.$serviceName,
+                'ip'          => $ip,
+                'port'        => $port,
+                'namespaceId' => $namespaceId,
+                'healthy'        => StringUtil::convertBoolToString($healthy),
+                'groupName'   => $groupName,
+                'clusterName'    => $clusterName,
+                //'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
+            ], RequestMethod::PUT)->body();
     }
 }
