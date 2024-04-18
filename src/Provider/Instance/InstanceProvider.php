@@ -75,7 +75,10 @@ class InstanceProvider extends BaseProvider
     public function list(string $serviceName, string $groupName = '', string $namespaceId = '', $clusters = '', bool $healthyOnly = false): ListResponse
     {
         return $this->client->request('nacos/v2/ns/instance/list', [
-            'serviceName' => $serviceName,
+            'ip'          => $ip,
+            'port'        => $port,
+            'namespaceId' => $namespaceId,
+            'serviceName' => $groupName.'@@'.$serviceName,
             'groupName'   => $groupName,
             'namespaceId' => $namespaceId,
             'clusters'    => \is_array($clusters) ? implode(',', $clusters) : $clusters,
