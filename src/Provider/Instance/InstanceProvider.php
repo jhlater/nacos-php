@@ -34,9 +34,8 @@ class InstanceProvider extends BaseProvider
             'ephemeral'   => StringUtil::convertBoolToString($ephemeral),
         ], RequestMethod::POST)->body();
     }
-    
-    public function deregister(string $ip, int $port, string $serviceName, string $namespaceId = '', $weight = 1, $enabled = true, $healthy = true, $metadata = '', string $clusterName = '', string $groupName = '', bool $ephemeral = false): bool
-    {
+    public function deregister(string $ip, int $port, string $serviceName, string $namespaceId, string $groupName , $weight = 1, $enabled = true, $healthy = true, $metadata = '', string $clusterName = '', bool $ephemeral = false): bool
+    { 
         return 'ok' === $this->client->request(self::INSTANCE_API_APTH, [
             'ip'          => $ip,
             'port'        => $port,
